@@ -14,13 +14,14 @@ const disabledString = "⚫";
 const ownConnectionString = "💻";
 
 class TailscaleNode {
-    constructor(_name, _address, _online, _offersExit, _usesExit, _isSelf) {
+    constructor(_name, _address, _online, _offersExit, _usesExit, _isSelf, _owner) {
         this.name = _name;
         this.address = _address;
         this.online = _online;
         this.offersExit = _offersExit;
         this.usesExit = _usesExit;
         this.isSelf = _isSelf;
+        this.owner = _owner;
     }
 
     get line() {
@@ -51,6 +52,7 @@ let icon;
 let icon_down;
 let icon_up;
 let icon_exit_node;
+let current_user_id;
 
 
 let timerId = null;
@@ -59,13 +61,16 @@ function extractNodeInfo(json) {
     nodes = [];
 
     var me = json.Self;
+    current_user_id = me.UserID;
+
     nodes.push(new TailscaleNode(
         me.DNSName.split(".")[0],
         me.TailscaleIPs[0],
         me.Online,
         me.ExitNodeOption,
         me.ExitNode,
-        true
+        true,
+        me.UserID
     ));
     
     for (let p in json.Peer) {
@@ -76,7 +81,8 @@ function extractNodeInfo(json) {
             n.Online,
             n.ExitNodeOption,
             n.ExitNode,
-            false
+            false,
+            me.UserID
         ));
     }
     nodes.sort(sortNodes)
@@ -173,7 +179,7 @@ function refreshExitNodesMenu() {
 function refreshSendMenu() {
     sendMenu.menu.removeAll();
     nodes.forEach( (node) => {
-        if (node.online && !node.isSelf) {
+        if (node.online && !node.isSelf && node.owner == current_user_id) {
             var item = new PopupMenu.PopupMenuItem(node.name)
             item.connect('activate', () => {
                 sendFiles(node.address);
